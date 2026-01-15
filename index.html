@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disaster Help AI (MVP)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            animation: fadeIn 1s ease-in;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            padding: 40px;
+            max-width: 550px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1);
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #222;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        h1 i { color: #ff6b6b; }
+
+        .subtitle {
+            font-size: 18px;
+            margin-bottom: 25px;
+            color: #666;
+            font-weight: 300;
+        }
+
+        textarea {
+            width: 100%;
+            height: 140px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            font-size: 16px;
+            resize: vertical;
+            margin-bottom: 25px;
+            outline: none;
+            transition: 0.3s ease;
+            background: rgba(255,255,255,0.8);
+        }
+
+        textarea:focus {
+            border-color: #4ecdc4;
+            box-shadow: 0 0 10px rgba(78,205,196,0.3);
+            transform: scale(1.02);
+        }
+
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: #fff;
+            border: none;
+            border-radius: 25px;
+            padding: 15px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-bottom: 25px;
+            transition: 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        button:hover { transform: translateY(-2px); }
+
+        .output {
+            text-align: left;
+            font-size: 16px;
+            line-height: 1.6;
+            padding: 25px;
+            background: rgba(249,249,249,0.9);
+            border-radius: 15px;
+            border: 1px solid #eee;
+            min-height: 120px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: 0.5s ease;
+        }
+
+        .output.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .loading {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #ff6b6b;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        @media (max-width: 600px) {
+            .container { padding: 25px; }
+            h1 { font-size: 24px; }
+            textarea { height: 120px; }
+            button { font-size: 16px; padding: 12px 25px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1><i class="fas fa-shield-alt"></i> Disaster Help AI (MVP)</h1>
+        <p class="subtitle">Describe your situation briefly</p>
+
+        <textarea id="userInput" placeholder="Example: Water is entering my house"></textarea>
+        <button id="submitBtn"><i class="fas fa-paper-plane"></i> Submit</button>
+
+        <div id="loading" class="loading"><div class="spinner"></div></div>
+        <div id="output" class="output"></div>
+    </div>
+
+<script>
+    async function processMessage() {
+        const input = document.getElementById('userInput').value.trim();
+        const output = document.getElementById('output');
+        const loading = document.getElementById('loading');
+        const button = document.getElementById('submitBtn');
+
+        if (!input) {
+            output.innerHTML = '<p><i class="fas fa-exclamation-triangle"></i> Please describe your situation.</p>';
+            output.classList.add('show');
+            return;
+        }
+
+        loading.style.display = 'flex';
+        button.disabled = true;
+        output.classList.remove('show');
+
+        try {
+            // 🔹 Replace with your actual backend URL later
+            const backendURL = "https://your-backend-url.com/api/disaster";
+
+            const res = await fetch(backendURL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: input })
+            });
+
+            if (!res.ok) throw new Error("API Error");
+            const data = await res.json();
+
+            showResult(data.disaster, data.steps, data.numbers);
+
+        } catch (err) {
+            console.warn("Backend failed → using local AI logic...");
+            const disaster = detectDisaster(input.toLowerCase());
+            const steps = getSafetySteps(disaster);
+            const numbers = { police: "100", ambulance: "108", emergency: "112" };
+            showResult(disaster, steps, numbers);
+        } finally {
+            loading.style.display = 'none';
+            button.disabled = false;
+        }
+    }
+
+    function showResult(disaster, steps, numbers) {
+        const output = document.getElementById('output');
+        const stepsHtml = steps.map(s => `<li><i class="fas fa-check-circle"></i> ${s}</li>`).join('');
+
+        output.innerHTML = `
+            <h2><i class="fas fa-exclamation-circle"></i> Disaster Type: ${capitalize(disaster)}</h2>
+            <p><strong>Immediate Safety Steps:</strong></p>
+            <ul>${stepsHtml}</ul>
+            <p><strong>Emergency Numbers:</strong></p>
+            <p>
+                <i class="fas fa-phone"></i> Police: ${numbers.police}<br>
+                <i class="fas fa-ambulance"></i> Ambulance: ${numbers.ambulance}<br>
+                <i class="fas fa-fire"></i> Emergency: ${numbers.emergency}
+            </p>
+        `;
+
+        output.classList.add('show');
+    }
+
+    function detectDisaster(text) {
+        const map = {
+            flood: ["water", "flood", "rising", "overflow"],
+            fire: ["fire", "burning", "smoke", "flames"],
+            earthquake: ["earthquake", "shaking", "quake", "tremor"]
+        };
+        for (const type in map)
+            if (map[type].some(k => text.includes(k))) return type;
+        return "unknown";
+    }
+
+    function getSafetySteps(disaster) {
+        const steps = {
+            flood: ["Turn off electricity", "Move to higher ground", "Avoid moving water"],
+            fire: ["Evacuate immediately", "Call emergency services", "Avoid smoke"],
+            earthquake: ["Drop, cover and hold on", "Stay away from windows", "Move to open space"],
+            unknown: ["Contact emergency services immediately"]
+        };
+        return steps[disaster] || steps.unknown;
+    }
+
+    const capitalize = w => w.charAt(0).toUpperCase() + w.slice(1);
+    document.getElementById('submitBtn').addEventListener('click', processMessage);
+</script>
+
+</body>
+</html>
