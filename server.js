@@ -28,28 +28,30 @@ Message: "${userMessage}"
     const response = await axios.post(
       "https://openrouter.ai/api/v1/chat/completions",
       {
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o-mini", // recommended cheap + powerful
         messages: [{ role: "user", content: prompt }]
       },
       {
         headers: {
           "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-          "HTTP-Referer": "http://localhost",
+          "HTTP-Referer": "https://render.com",
           "X-Title": "DisasterHelpAI"
         }
       }
     );
 
-    const text = response.data.choices[0].message.content;
-
+    const text = response.data.choices[0].message.content.trim();
     const json = JSON.parse(text);
+
     res.json(json);
 
   } catch (error) {
     console.error(error.response?.data || error);
+
+    // fallback response
     res.json({
       disaster: "unknown",
-      steps: ["Contact emergency services"],
+      steps: ["Contact emergency services immediately"],
       numbers: {
         police: "100",
         ambulance: "108",
@@ -59,4 +61,6 @@ Message: "${userMessage}"
   }
 });
 
-app.listen(4000, () => console.log("Server running on port 4000"));
+// Required for Render
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
